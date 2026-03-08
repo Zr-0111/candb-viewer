@@ -130,7 +130,7 @@ if uploaded_dbc is not None:
             )
 
             if parse_mode == "正向解析：CAN数据 → 物理值":
-                # 正向解析逻辑（你现在用的）
+                # 正向解析逻辑
                 can_id = st.text_input("CAN ID (16进制，如 123 或 0x123)", placeholder="123")
                 can_data = st.text_input("CAN 数据 (16进制，空格分隔，如 01 02 03)", placeholder="00 01 02 03")
                 hex_type = st.radio("选择十六进制显示类型", ["物理值转十六进制", "原始值转十六进制"], index=1)
@@ -198,7 +198,7 @@ if uploaded_dbc is not None:
                             st.error(f"解析失败：{str(e)}")
 
             else:
-                # 反向生成逻辑（你要的：由物理值反推CAN数据）
+                # 反向生成逻辑（修复step类型不匹配问题）
                 st.info("💡 选择消息后，输入信号物理值，自动生成对应的CAN原始数据")
                 
                 # 选择消息
@@ -210,10 +210,13 @@ if uploaded_dbc is not None:
                 st.write("#### 输入信号物理值")
                 signal_inputs = {}
                 for sig in selected_msg.signals:
+                    # 修复：确保step和value都是float类型
+                    step_val = float(sig.scale) if sig.scale is not None else 1.0
+                    default_val = float(sig.minimum) if sig.minimum is not None else 0.0
                     signal_inputs[sig.name] = st.number_input(
                         f"{sig.name} ({sig.unit if sig.unit else '无'})",
-                        value=float(sig.minimum) if sig.minimum is not None else 0.0,
-                        step=sig.scale
+                        value=default_val,
+                        step=step_val
                     )
 
                 if st.button("生成CAN原始数据"):
