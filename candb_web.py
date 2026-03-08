@@ -44,7 +44,7 @@ col1, col2 = st.columns([2, 1])
 
 with col1:
     # 1. 上传 DBC 文件
-    uploaded_dbc = st.file_uploader("📁 选择 DBC 文件", type="dbc", key="dbc_upload")
+    uploaded_dbc = st.file_uploader("📁 选择 DBC 文件", type=["dbc", "txt"], key="dbc_upload")
 
 with col2:
     st.markdown("#### 功能说明")
@@ -191,4 +191,5 @@ if uploaded_dbc is not None:
 
 # 底部说明（手机端可见）
 st.markdown("---")
+
 st.caption("💡 提示：手机端可左右滑动表格查看完整内容 | 所有数据仅本地解析，不会上传")
