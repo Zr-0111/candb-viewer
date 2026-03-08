@@ -50,6 +50,7 @@ with col2:
     st.markdown("#### 功能说明")
     st.write("✅ 解析DBC节点/消息/信号")
     st.write("✅ 计算CAN原始数据物理值")
+    st.write("✅ 物理值转十六进制显示")
     st.write("✅ 信号值可视化图表")
 
 # 初始化 DBC 数据库
@@ -118,14 +119,14 @@ if uploaded_dbc is not None:
                 # 信号表格（适配手机横向滚动）
                 st.dataframe(pd.DataFrame(signal_data), use_container_width=True)
 
-        # 5. CAN 原始数据解析功能
+        # 5. CAN 原始数据解析功能（新增物理值转十六进制）
         st.subheader("🧮 CAN 原始数据解析")
         with st.expander("展开使用解析功能", expanded=False):
             # 输入 CAN 数据
             can_id = st.text_input("CAN ID (16进制，如 123 或 0x123)", placeholder="123")
             can_data = st.text_input("CAN 数据 (16进制，空格分隔，如 01 02 03)", placeholder="00 01 02 03")
 
-            if st.button("解析物理值"):
+            if st.button("解析物理值（含十六进制）"):
                 if not can_id or not can_data:
                     st.error("请输入 CAN ID 和 数据！")
                 else:
@@ -143,19 +144,32 @@ if uploaded_dbc is not None:
                                 break
 
                         if target_msg:
-                            # 解析信号
+                            # 解析信号物理值
                             decoded_signals = db.decode_message(can_id_int, can_data_bytes)
                             st.success(f"解析成功！消息：{target_msg.name}")
 
-                            # 显示解析结果
-                            st.write("### 信号物理值")
+                            # 显示解析结果（新增十六进制转换）
+                            st.write("### 信号物理值 + 十六进制")
                             result_data = []
-                            for sig_name, sig_value in decoded_signals.items():
+                            for sig_name, phys_value in decoded_signals.items():
+                                # 找到对应信号对象
+                                sig_obj = next(s for s in target_msg.signals if s.name == sig_name)
+                                
+                                # 反向计算原始整数值：raw = (phys - offset) / scale
+                                raw_value = int(round((phys_value - sig_obj.offset) / sig_obj.scale))
+                                # 转换为十六进制（大写，按信号长度补零）
+                                hex_length = (sig_obj.length + 3) // 4  # bit转hex位数
+                                hex_value = hex(raw_value)[2:].zfill(hex_length).upper()
+                                
                                 result_data.append({
                                     "信号名称": sig_name,
-                                    "物理值": sig_value,
-                                    "单位": next(s.unit for s in target_msg.signals if s.name == sig_name) or "无"
+                                    "物理值": round(phys_value, 4),
+                                    "单位": sig_obj.unit if sig_obj.unit else "无",
+                                    "原始值(十进制)": raw_value,
+                                    "原始值(十六进制)": f"0x{hex_value}"
                                 })
+                            
+                            # 显示结果表格
                             st.dataframe(pd.DataFrame(result_data), use_container_width=True)
 
                             # 可视化（柱状图）
@@ -191,5 +205,4 @@ if uploaded_dbc is not None:
 
 # 底部说明（手机端可见）
 st.markdown("---")
-
 st.caption("💡 提示：手机端可左右滑动表格查看完整内容 | 所有数据仅本地解析，不会上传")
